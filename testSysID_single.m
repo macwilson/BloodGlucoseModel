@@ -13,7 +13,7 @@ Sugar = openLoopSim(patient,Food,InsulinRate);
 sugar_vec = interp1(Sugar.Time,Sugar.Data,time_vec,'linear');
 
 % Simulate the open loop response of the system id process
-[TF,IC] = sysID(patient);
+[TF,IC] = sysID(patient, 0.37);
 Y = step(TF,time_vec);
 id_resp = Y+IC;
 

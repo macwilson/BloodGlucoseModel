@@ -1,4 +1,4 @@
-function [TF, IC] = sysID(patient)
+function [TF, IC] = sysID(patient, Tau_pct)
 % Use this template to design an open-loop system identification routine given
 % the step time response of the patient. 
 
@@ -20,40 +20,44 @@ sugar_vec = interp1(Sugar.Time,Sugar.Data,time_vec,'linear');
 
 %% system identification
 
-% Here are some potentially useful functions:
-% - findpeak
-% - min/max
-
 %Find the peaks in the data, this is when the slope changes sign
-[PKS,LOCS] = findpeaks(-sugar_vec,time_vec);
+[PKS ,LOCS] = findpeaks(-sugar_vec,time_vec);
 
-if length(LOCS)<2
+IC = sugar_vec(1);
+FV  = sugar_vec(end); % pseudo-steady-state value
+Kdc = (FV-IC);
+
+
+% If too few oscillations just use first order 
+if (length(LOCS)<2) 
+    Tau_y_val = FV + Kdc*0.37;
+    [val , index] = min(abs(sugar_vec - Tau_y_val));
+    Tau = time_vec(index)/6;
     s = tf('s');
-    TF = -80*(4/(10*60))/(s+4/(10*60));
-    eta = 0;
-    wn = 0;
-    
+    TF = Kdc/(Tau*s + 1);
+
+
 else
-
-    %Find the min and max 
-    min_val = min(sugar_vec);
-    max_val = max(sugar_vec);
-
     %% our trial code
 
+    % first order system
+    Tau_y_val = FV + Kdc*Tau_pct;
+    [val , index] = min(abs(sugar_vec - Tau_y_val));
+    Tau = time_vec(index)/6;
+    s = tf('s');
+    TF1 = Kdc/(Tau*s + 1);
+    
+    % find the second order system values
     data = stepinfo(sugar_vec, time_vec);
     Tp = LOCS(1);
     Ts = data.SettlingTime; 
-    z = 220;
-
-
-    eta = sqrt((3.9*Tp)^2/((Ts*pi)^2 + (3.9*Tp)^2))
-    wn = 3.9/(eta*Ts)
-    p = 320;
-    Kdc = (min_val - max_val);
+    eta = sqrt((3.9*Tp)^2/((Ts*pi)^2 + (3.9*Tp)^2));
+    wn = 3.9/(eta*Ts);
     s = tf('s');
-    TF = Kdc*(z*s+1)*wn^2/((p*s+1)*(s^2+ 2*eta*wn*s + wn^2));
+    TF2 = (Kdc*wn^2)/(s^2+ 2*eta*wn*s + wn^2);
+    
+    % average for final TF
+    TF = (TF2+TF1)*0.5;
 end
 
-IC = sugar_vec(1);
 end
