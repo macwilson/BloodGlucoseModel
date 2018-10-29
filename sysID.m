@@ -1,4 +1,4 @@
-function [TF, IC] = sysID(patient)
+function [Tau, Kdc, first_odr_TF_vec, scnd_odr_TF_vec, cmb_odr_TF_vec, LOCS, TF, IC] = sysID(patient)
 % Use this template to design an open-loop system identification routine given
 % the step time response of the patient. 
 
@@ -20,40 +20,68 @@ sugar_vec = interp1(Sugar.Time,Sugar.Data,time_vec,'linear');
 
 %% system identification
 
-% Here are some potentially useful functions:
-% - findpeak
-% - min/max
-
 %Find the peaks in the data, this is when the slope changes sign
-[PKS,LOCS] = findpeaks(-sugar_vec,time_vec);
+[PKS ,LOCS] = findpeaks(-sugar_vec,time_vec);
 
-if length(LOCS)<2
+IC = sugar_vec(1);
+FV  = sugar_vec(end); % pseudo-steady-state value
+Kdc = (FV-IC);
+Tau_y_val = FV + Kdc*0.37;
+[val , index] = min(abs(sugar_vec - Tau_y_val));
+Tau = time_vec(index)/6;
+
+% If too few oscillations or funky gain/tau, just use first order 
+if (length(LOCS)<2) 
     s = tf('s');
-    TF = -80*(4/(10*60))/(s+4/(10*60));
+    TF = Kdc/(Tau*s + 1);
     eta = 0;
     wn = 0;
-    
 else
-
-    %Find the min and max 
-    min_val = min(sugar_vec);
-    max_val = max(sugar_vec);
-
     %% our trial code
-
+    % If tau and gain are funky, the model will fail so bump them
+%     if (Tau < 149) && (abs(Kdc) <53)
+%         Tau = 190;
+%     end
+    
+    % Get various tau values to test and optimize
+    Tau_y_vec = [];
+    val_index_vec = [];
+    Tau_vec = [];
+    percent_vec = [];
+    %Create vector of tau's to test
+    for j=0.3:0.01:0.5
+        percent_vec = [percent_vec j];
+        Tau_y_vec = [Tau_y_vec FV + Kdc*j];
+        [val , index] = min(abs(sugar_vec - Tau_y_val((j-.3)*100)));
+        val_index_vec = [val_index_vec [val , index]];
+        Tau_vec = [Tau_vec time_vec(index)/6];
+    end
+    
+    % first order system
+    s = tf('s');
+    % find the second order system values
     data = stepinfo(sugar_vec, time_vec);
     Tp = LOCS(1);
     Ts = data.SettlingTime; 
-    z = 220;
-
-
-    eta = sqrt((3.9*Tp)^2/((Ts*pi)^2 + (3.9*Tp)^2))
-    wn = 3.9/(eta*Ts)
-    p = 320;
-    Kdc = (min_val - max_val);
+    eta = sqrt((3.9*Tp)^2/((Ts*pi)^2 + (3.9*Tp)^2));
+    wn = 3.9/(eta*Ts);
     s = tf('s');
-    TF = Kdc*(z*s+1)*wn^2/((p*s+1)*(s^2+ 2*eta*wn*s + wn^2));
+    
+    first_odr_TF_vec = []; % first order TF vector
+    scnd_odr_TF_vec = []; % second order TF vector
+    cmb_odr_TF_vec = []; % combined TF's vector
+    for i=1:length(Tau_vec)
+        TF1 = Kdc/(Tau_vec(i)*s + 1);
+        first_odr_TF_vec = [first_odr_TF_vec TF1]
+        
+        TF2 = (Kdc*wn^2)/(s^2+ 2*eta*wn*s + wn^2);
+        scnd_odr_TF_vec = [scnd_odr_TF_vec TF2];
+        
+        cmb_odr_TF_vec = [cmb_odr_TF_vec [(TF2+TF1)*0.5 percent_vec(i)]]
+    end
+    
+    % average for final TF
+    % TF = (TF2+TF1)*0.5;
 end
 
-IC = sugar_vec(1);
 end
