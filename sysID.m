@@ -1,4 +1,4 @@
-function [Tau, Kdc, eta, wn, LOCS, TF, IC] = sysID(patient)
+function [TF, IC] = sysID(patient)
 % Use this template to design an open-loop system identification routine given
 % the step time response of the patient. 
 
@@ -45,7 +45,7 @@ else
     % first order system
     
     % If tau and gain are funky, the model will fail so bump them
-    if (Tau < 149) && (abs(Kdc) <53)
+    if (Tau < 150) && (abs(Kdc) <55)
         Tau = 190;
     end
     

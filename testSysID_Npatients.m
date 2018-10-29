@@ -1,10 +1,17 @@
+% testSysID_Npatients.m 
+% Run sysID.m on N number of patients (N is set by
+% user). For each patient, print out literally all parameters used in
+% sysID.m For failed patients, show the plot. Gives a final performance as
+% percent (failed/total).
+
 clearvars;
 
 % prepare input signal
 [time_vec, Food, InsulinRate] = inputVector();
 
 pass_count = 0;
-N = 50;
+N = 200;
+
 for i = 1:N
     % Generate a new random patient and simulate the open loop response of the
     % generated patient
@@ -36,27 +43,33 @@ for i = 1:N
     rmse_id = rmseFct(patient_sugar_resp, id_sugar_resp);
     rmse_ref = rmseFct(patient_sugar_resp, ref_sugar_resp);
     
+    % Record sysID error and all gathered parameters.
     d = rmse_ref - rmse_id;
-    x = [d, Kdc, Tau, eta, wn, LOCS];
+    x = [d, Kdc, Tau, Kdc*Tau, eta, wn, LOCS];
     
     if d>0
+        % sysID did better than reference, count as a pass.
         pass_count = pass_count + 1;
         disp(" ")
         disp(" ")
         disp("    Passed ID for ptnt #"+ i)
     else
+        % sysID did not do better than reference, count as a fail.
         disp(" ")
         disp(" ")
         disp("    FAILED ID FOR PTNT #"+ i)
         
+        % plot to see why it failed.
         plotSysId(time, patient_sugar_resp, ref_sugar_resp, id_sugar_resp, rmse_id, rmse_ref);
     end
     
-    disp("    diff      Kdc       Tau       eta       wn        LOCS")
+    % print out parameter data.
+    disp("    diff      Kdc       Tau       product   eta       wn        LOCS")
     disp(x)
     
 end
 
+% print final performance stat.
 disp(" ")
 disp(" ")
 disp(" ")
