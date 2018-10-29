@@ -1,4 +1,4 @@
-function [TF, IC] = sysID(patient)
+function [Tau, Kdc, eta, wn, LOCS, TF, IC] = sysID(patient)
 % Use this template to design an open-loop system identification routine given
 % the step time response of the patient. 
 
@@ -20,37 +20,35 @@ sugar_vec = interp1(Sugar.Time,Sugar.Data,time_vec,'linear');
 
 %% system identification
 
-% Here are some potentially useful functions:
-% - findpeak
-% - min/max
-
 %Find the peaks in the data, this is when the slope changes sign
-[PKS,LOCS] = findpeaks(-sugar_vec,time_vec);
+[PKS ,LOCS] = findpeaks(-sugar_vec,time_vec);
 
 IC = sugar_vec(1);
 FV  = sugar_vec(end); % pseudo-steady-state value
 Kdc = (FV-IC);
+Tau_y_val = FV + Kdc*0.37;
+[val , index] = min(abs(sugar_vec - Tau_y_val));
+Tau = time_vec(index)/6;
 
-
-if length(LOCS)<2
-    TF = TF1;
-    Tau_y_val = FV + Kdc*0.37;
-
-    [val, index] = min(abs(sugar_vec - Tau_y_val));
-    Tau = time_vec(index)/60;
-
+% If too few oscillations or funky gain/tau, just use first order 
+if (length(LOCS)<2) 
     s = tf('s');
     TF = Kdc/(Tau*s + 1);
+    eta = 0;
+    wn = 0;
+
+
     
 else
     %% our trial code
+
+    % first order system
     
-    % find the first order system
-    Tau_y_val = FV + Kdc*0.25;
-
-    [val, index] = min(abs(sugar_vec - Tau_y_val));
-    Tau = time_vec(index)/60;
-
+    % If tau and gain are funky, the model will fail so bump them
+    if (Tau < 149) && (abs(Kdc) <53)
+        Tau = 190;
+    end
+    
     s = tf('s');
     TF1 = Kdc/(Tau*s + 1);
     
@@ -58,14 +56,13 @@ else
     data = stepinfo(sugar_vec, time_vec);
     Tp = LOCS(1);
     Ts = data.SettlingTime; 
-    %z = 220;
-    eta = sqrt((3.9*Tp)^2/((Ts*pi)^2 + (3.9*Tp)^2))
-    wn = 3.9/(eta*Ts)
-    %p = 320;
+    eta = sqrt((3.9*Tp)^2/((Ts*pi)^2 + (3.9*Tp)^2));
+    wn = 3.9/(eta*Ts);
     s = tf('s');
-    TF2 = (wn^2)/(s^2+ 2*eta*wn*s + wn^2);
+    TF2 = (Kdc*wn^2)/(s^2+ 2*eta*wn*s + wn^2);
     
-    TF = TF1*TF2;
+    % average for final TF
+    TF = (TF2+TF1)*0.5;
 end
 
 end
