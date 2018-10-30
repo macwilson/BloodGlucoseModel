@@ -23,7 +23,7 @@ for i = 1:N
     sugar_vec = interp1(Sugar.Time,Sugar.Data,time_vec,'linear');
 
     % Simulate the open loop response of the system id process
-    [Tau, Kdc, eta, wn, LOCS, TF, IC] = sysID(patient);
+    [TF, IC] = sysID(patient);
     Y = step(TF,time_vec);
     id_resp = Y+IC;
 
@@ -45,7 +45,6 @@ for i = 1:N
     
     % Record sysID error and all gathered parameters.
     d = rmse_ref - rmse_id;
-    x = [d, Kdc, Tau, Kdc*Tau, eta, wn, LOCS];
     
     if d>0
         % sysID did better than reference, count as a pass.
@@ -62,11 +61,7 @@ for i = 1:N
         % plot to see why it failed.
         plotSysId(time, patient_sugar_resp, ref_sugar_resp, id_sugar_resp, rmse_id, rmse_ref);
     end
-    
-    % print out parameter data.
-    disp("    diff      Kdc       Tau       product   eta       wn        LOCS")
-    disp(x)
-    
+
 end
 
 % print final performance stat.

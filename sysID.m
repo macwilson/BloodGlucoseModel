@@ -30,21 +30,19 @@ Tau_y_val = FV + Kdc*0.37;
 [val , index] = min(abs(sugar_vec - Tau_y_val));
 Tau = time_vec(index)/6;
 
-% If too few oscillations or funky gain/tau, just use first order 
+% If too few oscillations just use first order 
 if (length(LOCS)<2) 
     s = tf('s');
     TF = Kdc/(Tau*s + 1);
-    eta = 0;
-    wn = 0;
 
 
-    
 else
     %% our trial code
 
     % first order system
     
-    % If tau and gain are funky, the model will fail so bump them
+    % If tau and gain are funky, the model will undershoot too much on its
+    % first oscillation. Bump Tau to a higher value to avoid this. 
     if (Tau < 150) && (abs(Kdc) <55)
         Tau = 190;
     end
