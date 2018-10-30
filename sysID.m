@@ -1,4 +1,4 @@
-function [Tau, Kdc, first_odr_TF_vec, scnd_odr_TF_vec, cmb_odr_TF_vec, LOCS, TF, IC] = sysID(patient)
+function [Tau_vec, Kdc, cmb_odr_TF_vec, LOCS, IC] = sysID(patient)
 % Use this template to design an open-loop system identification routine given
 % the step time response of the patient. 
 
@@ -49,14 +49,14 @@ else
     Tau_vec = [];
     percent_vec = [];
     %Create vector of tau's to test
-    for j=0.3:0.01:0.5
+    for j=0.2:0.01:0.4
         percent_vec = [percent_vec j];
-        Tau_y_vec = [Tau_y_vec FV + Kdc*j];
-        [val , index] = min(abs(sugar_vec - Tau_y_val((j-.3)*100)));
+        Tau_y_vec = [Tau_y_vec (FV+Kdc*j)];
+        x = round((j*100) - 19);
+        [val , index] = min(abs(sugar_vec - Tau_y_vec(x)));
         val_index_vec = [val_index_vec [val , index]];
         Tau_vec = [Tau_vec time_vec(index)/6];
     end
-    
     % first order system
     s = tf('s');
     % find the second order system values
@@ -67,19 +67,18 @@ else
     wn = 3.9/(eta*Ts);
     s = tf('s');
     
-    first_odr_TF_vec = []; % first order TF vector
-    scnd_odr_TF_vec = []; % second order TF vector
+    %first_odr_TF_vec = []; % first order TF vector
+    %scnd_odr_TF_vec = []; % second order TF vector
     cmb_odr_TF_vec = []; % combined TF's vector
     for i=1:length(Tau_vec)
         TF1 = Kdc/(Tau_vec(i)*s + 1);
-        first_odr_TF_vec = [first_odr_TF_vec TF1]
+        %first_odr_TF_vec = [first_odr_TF_vec TF1];
         
         TF2 = (Kdc*wn^2)/(s^2+ 2*eta*wn*s + wn^2);
-        scnd_odr_TF_vec = [scnd_odr_TF_vec TF2];
+        %scnd_odr_TF_vec = [scnd_odr_TF_vec TF2];
         
-        cmb_odr_TF_vec = [cmb_odr_TF_vec [(TF2+TF1)*0.5 percent_vec(i)]]
+        cmb_odr_TF_vec = [cmb_odr_TF_vec [(TF2+TF1)*0.5, percent_vec(i)]];
     end
-    
     % average for final TF
     % TF = (TF2+TF1)*0.5;
 end
