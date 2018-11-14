@@ -19,7 +19,12 @@ sugar_vec_closeloop = interp1(Sugar_closeloop.Time,Sugar_closeloop.Data,time_vec
 
 %% controller design
 s = tf('s');
-Controller = tf(-0.5/(s+1));
+%Controller = tf(-0.8/(s+2));
+Ki = -0.005;
+Kp = -0.5;
+Kd = -7;
+Controller = Kp + Ki/s  + (Kd*s)/(0.01*s+1)
+
 end
 
 function [TF, IC] = sysID(patient) % update this function as appropriate
@@ -27,11 +32,6 @@ function [TF, IC] = sysID(patient) % update this function as appropriate
 [time_vec, Food, InsulinRate] = inputVector();
 Sugar = openLoopSim(patient,Food,InsulinRate);
 sugar_vec = interp1(Sugar.Time,Sugar.Data,time_vec,'linear');
-
-%% system identification
-[PKS,LOCS] = findpeaks(sugar_vec,time_vec);
-min_val = min(sugar_vec);
-max_val = max(sugar_vec);
 
 %% system identification
 
@@ -45,16 +45,14 @@ Tau_y_val = FV + Kdc*0.37;
 [val , index] = min(abs(sugar_vec - Tau_y_val));
 Tau = time_vec(index)/6;
 
-% If too few oscillations just use first order 
+%% If too few oscillations just use first order 
 if (length(LOCS)<2) 
     s = tf('s');
     TF = Kdc/(Tau*s + 1);
 
 
 else
-    %% our trial code
-
-    % first order system
+    %% Second order system
     
     % If tau and gain are funky, the model will undershoot too much on its
     % first oscillation. Bump Tau to a higher value to avoid this. 
