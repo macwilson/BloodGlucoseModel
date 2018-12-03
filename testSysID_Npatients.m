@@ -9,8 +9,10 @@ clearvars;
 % prepare input signal
 [time_vec, Food, InsulinRate] = inputVector();
 
-pass_count = 0;
-N = 200;
+grade_sum = 0;
+rmse_id_sum = 0;
+rmse_ref_sum = 0;
+N = 50;
 
 for i = 1:N
     % Generate a new random patient and simulate the open loop response of the
@@ -44,23 +46,23 @@ for i = 1:N
     rmse_ref = rmseFct(patient_sugar_resp, ref_sugar_resp);
     
     % Record sysID error and all gathered parameters.
-    d = rmse_ref - rmse_id;
     
-    if d>0
-        % sysID did better than reference, count as a pass.
-        pass_count = pass_count + 1;
-        disp(" ")
-        disp(" ")
-        disp("    Passed ID for ptnt #"+ i)
-    else
-        % sysID did not do better than reference, count as a fail.
-        disp(" ")
-        disp(" ")
-        disp("    FAILED ID FOR PTNT #"+ i)
-        
-        % plot to see why it failed.
+    disp("TRIAL "+ i)
+    
+    grade = (rmse_ref - rmse_id)/rmse_ref ;
+    if grade<0 
+        grade=0;
         plotSysId(time, patient_sugar_resp, ref_sugar_resp, id_sugar_resp, rmse_id, rmse_ref);
+        
     end
+    
+    grade_sum = grade_sum + grade;
+    rmse_ref_sum = rmse_ref_sum + rmse_ref;
+    rmse_id_sum = rmse_id_sum + rmse_id;
+    disp("rmse ref " + rmse_ref)
+    disp("rmse id " + rmse_id)
+    disp("Grade: " + grade*100)
+    disp("")
 
 end
 
@@ -69,4 +71,6 @@ disp(" ")
 disp(" ")
 disp(" ")
 disp("DONE N TRIALS.")
-disp("FINAL SUCCESS RATE %: "+ (pass_count/N)*100)
+disp("FINAL AVERAGE GRADE: %"+ (grade_sum/N)*100)
+disp("Average sysID RMSE: " + (rmse_id_sum/N))
+disp("Average refID RMSE: " + (rmse_ref_sum/N))

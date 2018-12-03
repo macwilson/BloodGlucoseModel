@@ -34,3 +34,6 @@ rmse_id = rmseFct(patient_sugar_resp, id_sugar_resp);
 rmse_ref = rmseFct(patient_sugar_resp, ref_sugar_resp);
 
 plotSysId(time, patient_sugar_resp, ref_sugar_resp, id_sugar_resp, rmse_id, rmse_ref);
+
+% CALCULATE GRADE
+%display(((rmse_ref - rmse_id)/rmse_ref )*100)
